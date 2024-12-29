@@ -1,0 +1,78 @@
+#######################################################################################
+# Powershell requests
+
+REQUEST FOR SEARCH ENDPOINT:
+$headers = @{
+    Authorization = "testingAPIKEY*"
+    "Content-Type" = "application/json"
+}
+
+$body = @{
+    search_entry = "sample search term"
+}
+
+$response = Invoke-WebRequest -Uri "http://localhost:8000/ranking-engine/search" `
+                              -Method POST `
+                              -Headers $headers `
+                              -Body ($body | ConvertTo-Json -Depth 10)
+
+# Convert the response content to JSON format and display it
+$responseContent = $response.Content | ConvertFrom-Json
+
+# Display the full content of the response (this is a non-truncated version)
+$responseContent | ConvertTo-Json -Depth 10
+
+REQUEST FOR STATUS ENDPOINT:
+$headers = @{
+    "Content-Type" = "application/json"
+}
+
+$response = Invoke-WebRequest -Uri "http://localhost:8000/ranking-engine/status" `
+                              -Method GET `
+                              -Headers $headers
+
+# Convert the response content to JSON format and display it
+$responseContent = $response.Content | ConvertFrom-Json
+
+# Display the full content of the response (this is a non-truncated version)
+$responseContent | ConvertTo-Json -Depth 10
+
+REQUEST FOR ADD ENDPOINT:
+ $headers = @{
+     Authorization = "testingAPIKEY*"
+     "Content-Type" = "application/json"
+ }
+
+ $body = @{
+     add_entry = "Who won the 1992 NBA Championship?"
+ }
+
+ $response = Invoke-WebRequest -Uri "http://localhost:8000/ranking-engine/add_entry" `
+                               -Method POST `
+                               -Headers $headers `
+                               -Body ($body | ConvertTo-Json)
+
+ # Convert the response content to JSON format and display it
+ $responseContent = $response.Content | ConvertFrom-Json
+ $responseContent | ConvertTo-Json -Depth 10
+
+#######################################################################################
+# Bash environment requests
+REQUEST FOR SEARCH ENDPOINT:
+
+curl -X POST http://localhost:8000/ranking-engine/search \
+    -H "Authorization: testingAPIKEY*" \
+    -H "Content-Type: application/json" \
+    -d '{"search_entry": "sample search term"}'
+
+REQUEST FOR STATUS ENDPOINT:
+
+curl -X GET http://localhost:8000/ranking-engine/status \
+    -H "Content-Type: application/json"
+
+REQUEST FOR ADD ENDPOINT:
+
+curl -X POST http://localhost:8000/ranking-engine/add_entry \
+    -H "Authorization: testingAPIKEY*" \
+    -H "Content-Type: application/json" \
+    -d '{"add_entry": "Who won the 1992 NBA Championship?"}'
