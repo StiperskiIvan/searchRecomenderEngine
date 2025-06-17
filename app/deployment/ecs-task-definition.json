@@ -1,0 +1,42 @@
+{
+  "family": "ranking-search-engine-task",
+  "networkMode": "awsvpc",
+  "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::123456789012:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "ranking-search-engine-container",
+      "image": "123456789012.dkr.ecr.region.amazonaws.com/ranking-search-engine:latest",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "secrets": [
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:open-ai-api_key"
+        },
+        {
+          "name": "AUTHORIZATION_KEY",
+          "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:user-api-key"
+        },
+        {
+          "name": "REDIS_USERNAME",
+          "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:redis-user"
+        },
+        {
+          "name": "REDIS_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:region:123456789012:secret:redis-password"
+        }
+      ]
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024"
+}

@@ -1,14 +1,16 @@
 import json
+import os
 from logging import Logger
 from typing import List, Dict
 
+import openai as openai
 import redis as redis
 import hashlib
 from fastapi import APIRouter, Depends
 from app.config import Config
 from fastapi.responses import ORJSONResponse
 from app.dependencies import verify_key
-from app.models.IO_model import SearchInputModel, AddInputModel, SearchOutputModel
+from app.models.IO_model import SearchInputModel, AddInputModel, SearchOutputModel, RAGOutputModel, RAGInputModel
 from app.services.search_engine import SearchEngine
 import time
 
@@ -45,6 +47,7 @@ class SearchRouter:
         api_router = APIRouter(
             prefix=Config.BASE_API_PATH, tags=["ranking-search-engine"]
         )
+        openai.api_key = Config.OPENAI_API_KEY
 
         @api_router.get("/status")
         def status():
@@ -70,8 +73,10 @@ class SearchRouter:
                 3. In time this would reduce the computation time significantly 
                 """
 
-            document_indexes = self.__searcher.search_tfidf(query=term)
-            results: Dict[str: List[str]] = {"document_indexes": document_indexes}
+            search_results = self.__searcher.search_tfidf(query=term)
+            # Extract only document indexes (file_names) from the results
+            document_indexes = [result["document_index"] for result in search_results]
+            results: Dict[str, List[str]] = {"document_indexes": document_indexes}
             try:
                 SearchOutputModel.model_validate(results)
             except Exception as e:
@@ -93,5 +98,57 @@ class SearchRouter:
             process_end = time.time()
             self.__logger.info(f"Time to add entry: {term}: {round((process_end-process_start), 3)} ms")
             return ORJSONResponse({"added_entry": f"{term}"})
+
+        @api_router.post(
+            path="/rag-answer",
+            dependencies=[Depends(verify_key)],
+            response_class=ORJSONResponse,
+            description="Runs RAG with real OpenAI API call for answer generation"
+        )
+        def rag_answer(payload: RAGInputModel):
+            question = payload.question
+            process_start = time.time()
+
+            # Step 1: Retrieve relevant docs
+            retrieved_docs = self.__searcher.search_tfidf(query=question)
+            context_snippets = [doc['document_text'] for doc in retrieved_docs]
+            full_context = "\n\n".join(context_snippets)
+
+            # Step 2: Prepare prompt for OpenAI
+            prompt = (
+                f"Given the following context, answer the user's question as accurately as possible. "
+                f"Please answer with only the direct answer. No explanations.\n\n"
+                f"Context:\n{full_context}\n\n"
+                f"Question: {question}\n"
+                f"Answer:"
+            )
+
+            # Step 3: Call OpenAI API
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.0,
+                    max_tokens=512
+                )
+                generated_answer = response['choices'][0]['message']['content'].strip()
+            except Exception as e:
+                self.__logger.error(f"OpenAI API error: {repr(e)}")
+                generated_answer = "(Error generating answer from OpenAI)"
+
+            # Step 4: Prepare output
+            response_payload = RAGOutputModel(
+                question=question,
+                retrieved_documents=retrieved_docs,
+                simulated_answer=generated_answer
+            )
+            self.__logger.info(f"RAG output: {response_payload.json()}")
+            process_end = time.time()
+            self.__logger.info(f"Time to RAG-answer (OpenAI): {round((process_end - process_start), 3)} ms")
+
+            return ORJSONResponse({"Model answer": generated_answer})
 
         return api_router

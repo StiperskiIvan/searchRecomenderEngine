@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 import re
@@ -15,11 +16,13 @@ from app.config import Config
 INPUT_LANGUAGE = "english"
 VECTORIZED_OUTPUT_FILE_NAME = "tfidf_data.pkl"
 VECTORIZER_OUTPUT_FILE_NAME = "vectorizer.pkl"
+DOCUMENTS_FILE_OUTPUT = "cleaned_20newsgroups.json"
 TOP_K_RESULTS = Config.NO_OF_RESULTS_RETURNED
 
 current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 model_file_path = os.path.join(current_path, "data", "proccessed_data", VECTORIZED_OUTPUT_FILE_NAME)
 vectorizer_file_path = os.path.join(current_path, "data", "proccessed_data", VECTORIZER_OUTPUT_FILE_NAME)
+documents_file_path = os.path.join(current_path, "data", "proccessed_data", DOCUMENTS_FILE_OUTPUT)
 
 
 def preprocess_text(text: str, language: str = INPUT_LANGUAGE) -> str:
@@ -67,6 +70,7 @@ class SearchEngine:
             model_path=model_file_path,
             vectorizer_path=vectorizer_file_path
         )
+        self.__documents = self.__load_documents()
         self.__doc_matrix, self.__file_names = self.__prepare_document_vectors(
             vectorized_data=self.__model,
             vectorizer=self.__vectorizer
@@ -94,6 +98,16 @@ class SearchEngine:
             self.__logger.error(f"Error loading models: {repr(e)}")
             raise e
         return tfidf_vectors, vectorizer
+
+    def __load_documents(self):
+        try:
+            with open(documents_file_path, "r", encoding="utf-8") as f:
+                documents = json.load(f)
+            return documents
+        except Exception as e:
+            if self.__logger:
+                self.__logger.error(f"Error loading documents JSON: {repr(e)}")
+            return []
 
     def __prepare_document_vectors(self, vectorized_data, vectorizer):
         """
@@ -126,7 +140,7 @@ class SearchEngine:
             raise e
         return doc_matrix.tocsr(), file_names
 
-    def search_tfidf(self, query: str) -> List[str]:
+    def search_tfidf(self, query: str) -> List:
         """
         Search for the top K most similar documents using cosine similarity.
 
@@ -144,8 +158,22 @@ class SearchEngine:
 
         # Get top K results
         top_indices = similarities.argsort()[::-1][:TOP_K_RESULTS]
-        results: List[str] = [str(self.__file_names[i]) for i in top_indices]
+        # results: List[str] = [str(self.__file_names[i]) for i in top_indices]
+        results = []
+        for idx in top_indices:
+            file_name = self.__file_names[idx]
 
+            # Find document text from loaded documents by matching file_name
+            doc_text = ""
+            for doc in self.__documents:
+                if doc["file_name"] == file_name:
+                    doc_text = doc.get("original_text", "")
+                    break
+
+            results.append({
+                "document_index": file_name,
+                "document_text": doc_text
+            })
         return results
 
     def add_entry(self, text: str):

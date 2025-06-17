@@ -76,3 +76,11 @@ curl -X POST http://localhost:8000/ranking-engine/add_entry \
     -H "Authorization: testingAPIKEY*" \
     -H "Content-Type: application/json" \
     -d '{"add_entry": "Who won the 1992 NBA Championship?"}'
+
+REQUEST FOR RAG-ANSWER ENDPOINT:
+
+curl -X POST http://localhost:8000/ranking-engine/rag-answer \
+    -H "Authorization: testingAPIKEY*" \
+    -H "Content-Type: application/json" \
+    -d '{"question": "What did the 1992 NBA championship involve?"}'
+
