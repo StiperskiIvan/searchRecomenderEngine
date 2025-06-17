@@ -15,6 +15,7 @@ A script to repeat those steps can be found in `prepare_data` folder.
 - **Search Endpoint**: Allows users to search for terms and retrieve the top 10 most similar results using the TF-IDF method.
 - **Add Entry Endpoint**: Lets users add new entries to the database and recalculates the scores for documents.
 - **Status Endpoint**: Provides the current status of the API, including health checks.
+- **RAG-Answer Endpoint**: Accepts a question, retrieves relevant documents using TF-IDF, and generates an answer using the OpenAI GPT-4 model with the retrieved context.
 
 ## Installation
 
@@ -25,6 +26,7 @@ Before setting up the application, make sure you have the following installed:
 - Python > 3.9
 - Docker (if using containerization)
 - Uvicorn (for serving FastAPI)
+- OpenAI Python package (for RAG-Answer endpoint)
 
 ### Setup
 
@@ -122,6 +124,26 @@ This endpoint adds a new entry to the document database. By default, parameter `
 ```json
 {
   "added_entry": "Who won the 1992 NBA Championship?"
+}
+```
+
+### `/ranking-engine/rag-answer` (POST)
+
+Accepts a question, retrieves relevant documents using TF-IDF, and generates an answer using OpenAI’s GPT-4 model based on the retrieved context. Returns the answer in JSON format.
+
+#### Payload:
+
+```json
+{
+  "question": "What did the 1992 NBA championship involve?"
+}
+```
+
+#### Response:
+
+```json
+{
+  "answer": "The 1992 NBA championship was won by the Chicago Bulls, defeating the Portland Trail Blazers in six games."
 }
 ```
 
